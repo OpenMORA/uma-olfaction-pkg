@@ -30,12 +30,12 @@
 #define CEnoseModularApp_H
 
 #include <MOOS/libMOOS/App/MOOSApp.h>
-#include <CMapirMOOSApp.h>
+#include <COpenMORAMOOSApp.h>
 #include <mrpt/hwdrivers/CEnoseModular.h>
 #include <mrpt/gui/CDisplayWindowPlots.h>
 
 
-class CEnoseDisplayApp : public CMapirMOOSApp
+class CEnoseDisplayApp : public COpenMORAApp
 {
 public:
     CEnoseDisplayApp();

@@ -29,7 +29,7 @@
 #ifndef CDistributionMappingApp_H
 #define CDistributionMappingApp_H
 
-#include <CMapirMOOSApp.h>
+#include <COpenMORAMOOSApp.h>
 #include <MOOS/libMOOS/App/MOOSApp.h>
 #include <mrpt/utils.h>
 #include <mrpt/utils/CFileGZInputStream.h>
@@ -42,7 +42,7 @@
 
 #define INVALID_SENSOR_INDEX  size_t(-1)
 
-class CDistributionMappingApp : public CMapirMOOSApp
+class CDistributionMappingApp : public COpenMORAApp
 {
 public:
     CDistributionMappingApp();

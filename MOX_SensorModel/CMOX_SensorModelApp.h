@@ -29,13 +29,13 @@
 #ifndef CMOX_SensorModelApp_H
 #define CMOX_SensorModelApp_H
 
-#include <CMapirMOOSApp.h>
+#include <COpenMORAMOOSApp.h>
 #include <MOOS/libMOOS/App/MOOSApp.h>
 #include <mrpt/slam/CObservationGasSensors.h>
 
 #define INVALID_SENSOR_INDEX size_t(-1)
 
-class CMOX_SensorModelApp : public CMapirMOOSApp
+class CMOX_SensorModelApp : public COpenMORAApp
 {
 public:
     CMOX_SensorModelApp();

@@ -31,13 +31,13 @@
 
 #include <MOOS/libMOOS/App/MOOSApp.h>
 #include <mrpt/utils/CFileGZOutputStream.h>
-#include <CMapirMOOSApp.h>
+#include <COpenMORAMOOSApp.h>
 
 // All the types of gas map simulators:
 #include "GasMapModels.h"
 
 
-class CEnoseSimulApp : public CMapirMOOSApp
+class CEnoseSimulApp : public COpenMORAApp
 {
 public:
     CEnoseSimulApp();

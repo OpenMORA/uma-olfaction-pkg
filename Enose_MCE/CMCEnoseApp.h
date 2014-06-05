@@ -29,7 +29,7 @@
 #ifndef CMCEnoseApp_H
 #define CMCEnoseApp_H
 
-#include <CMapirMOOSApp.h>
+#include <COpenMORAMOOSApp.h>
 #include <MOOS/libMOOS/App/MOOSApp.h>
 #include <mrpt/hwdrivers/CBoardENoses.h>
 #include <mrpt/math.h>
@@ -37,7 +37,7 @@
 
 #define INVALID_SENSOR_INDEX size_t(-1)
 
-class CMCEnoseApp : public CMapirMOOSApp
+class CMCEnoseApp : public COpenMORAApp
 {
 public:
     CMCEnoseApp();
