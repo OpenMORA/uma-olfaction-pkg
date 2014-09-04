@@ -29,6 +29,9 @@
 /**  @moos_module Graphical Display for CObservationGasSensors observations comming from electronic-noses
   *  This module enables the display of the different chambers and sensors of an elecronic nose publishing a CObservationGasSensors type of observation 
   *  See Enose_MCE and CGenericSensor::EnoseModular modules for examples.
+  *  Sensor IDs
+  *				Temperature  = 0xFFFF
+  *				CRaePID		 = 0x0001
 */
 
 #include "CEnoseDisplayApp.h"
@@ -55,13 +58,11 @@ CEnoseDisplayApp::~CEnoseDisplayApp()
 //-------------------------------------
 bool CEnoseDisplayApp::OnStartUp()
 {
-	cout << "Configuration of pEnoseModular started" << endl;
-	mrpt::system::sleep(3000);
-
+	mrpt::system::sleep(1000);
 
 	//!  @moos_param ENOSE_LABEL The name of the MOOS variable containing the Enose data to be displayed
-	m_MissionReader.GetConfigurationParam( "ENOSE_LABEL", enose_label );
-
+	m_MissionReader.GetConfigurationParam( "enose_label", enose_label );
+	
 	//!  @moos_param graphics_min_x Minimum value on the X axis plot (time axis) to display
 	m_MissionReader.GetConfigurationParam( "graphics_min_x", graphics_min_x );
 	//!  @moos_param graphics_max_x Maximum value on the X axis plot (time axis) to display.
@@ -71,16 +72,25 @@ bool CEnoseDisplayApp::OnStartUp()
 	//!  @moos_param graphics_max_y Maximum value on the Y axis plot (Votls axis) to display.
 	m_MissionReader.GetConfigurationParam( "graphics_max_y", graphics_max_y );
 
+	//DEBUG
+	//enose_label = "EnoseModular";
+	//graphics_min_x = -20.0;			// min value on the X axis plot (time)
+	//graphics_max_x = 220.0;			// max value on the X axis plot (time)
+	//graphics_min_y = -0.1;				// min value on the Y axis plot (Volts)
+	//graphics_max_y = 0.7;			// max value on the Y axis plot (Volts)
 
 	//Init params
 	winExists = false;
+	timStart = 0;
+
 	//Create color palet
 	colors[0] = "b-4";
 	colors[1] = "r-4";
 	colors[2] = "k-4";
 	colors[3] = "m-4";
-	colors[3] = "g-4";
-
+	colors[4] = "g-4";
+	colors[5] = "c-4";
+	
 	return DoRegistrations();
 }
 
@@ -108,6 +118,8 @@ bool CEnoseDisplayApp::Iterate()
 {
 	try
 	{
+		cout << "-------------------------------------" << endl;
+
 		// Get last observation from specified E-nose
 		CMOOSVariable * pVarGas = GetMOOSVar( enose_label );
 		if( pVarGas && pVarGas->IsFresh() )
@@ -116,24 +128,34 @@ bool CEnoseDisplayApp::Iterate()
 		
 			CSerializablePtr obj;
 			mrpt::slam::CObservationGasSensorsPtr gasObs;
-			StringToObject(pVarGas->GetStringVal(),obj);
+			mrpt::utils::RawStringToObject(pVarGas->GetStringRef(), obj);
 		
 			if ( IS_CLASS(obj, CObservationGasSensors ))
-				gasObs = CObservationGasSensorsPtr(obj);		
+			{
+				gasObs = CObservationGasSensorsPtr(obj);
+				cout << "New gasObs: ";
+			}
 			else
 			{
 				cout << "Error: Obs is not CObservationGasSensors type" << endl;
 				return false;
 			}
 			
-			//Display values on screen
-			printf("-------------------------------------\n");
-			printf("%s\n", gasObs->sensorLabel.c_str());
+			// Display values on screen
+			//-----------------------------------------			
+			cout << gasObs->sensorLabel.c_str() << endl;
+			//Timestamps
+			if (timStart == 0)
+				timStart = gasObs->timestamp;
+			else
+				cout << "\t Timestamp: " << mrpt::system::timeDifference(timStart,gasObs->timestamp) << endl;
+
 			//For each chamber
 			for( size_t ch=0; ch<gasObs->m_readings.size(); ch++ )
 			{
 				printf("\t Chamber: %u\n", ch);
-				printf("\t\t Temperature --> %.2f\n", gasObs->m_readings[ch].temperature);
+				if( gasObs->m_readings[ch].hasTemperature )
+					printf("\t\t Temperature --> %.2f\n", gasObs->m_readings[ch].temperature);
 				//For each sensor
 				for( size_t its=0; its<gasObs->m_readings[ch].sensorTypes.size(); its++ )
 				{
@@ -141,10 +163,9 @@ bool CEnoseDisplayApp::Iterate()
 					printf("\t\t %u-> %.2f \n",model,gasObs->m_readings[0].readingsVoltage[its]);
 				}
 			}
-		
+			
 			//Add obs to Graphical display
-			addToPlot(gasObs);
-						
+			//addToPlot(gasObs);					
 			return true;
 		}
 	
@@ -177,6 +198,9 @@ bool CEnoseDisplayApp::OnConnectToServer()
 //-------------------------------------
 bool CEnoseDisplayApp::DoRegistrations()
 {
+	//DEBUG
+	//AddMOOSVariable( "EnoseModular", "EnoseModular", "EnoseModular", 0 );
+
 	//! @moos_subscribe <enose_label>
 	AddMOOSVariable( enose_label, enose_label, enose_label, 0 );
 
@@ -213,47 +237,69 @@ bool CEnoseDisplayApp::OnNewMail(MOOSMSG_LIST &NewMail)
 -------------------------------------------------------------*/
 void CEnoseDisplayApp::addToPlot(mrpt::slam::CObservationGasSensorsPtr &obs)
 {
-	
-	//If this is the first observation, resize windows according to the number of chambers to display
-	if ( sensorReadings.empty() )
-	{
-		cout << "Creating Display" << endl;
-		sensorReadings.resize( obs->m_readings.size() );
-		timStart = mrpt::system::getCurrentTime();
-	}
-
-	//Add new timeStamp (seconds)
-	timeReadings.push_back( mrpt::system::timeDifference(timStart,obs->timestamp) );
-	//Keep a max number of samples in Memory
-	if (timeReadings.size() > 400)
-		timeReadings.erase(timeReadings.begin());
-
-	//For each Chamber
-	for (size_t ch=0; ch<sensorReadings.size(); ch++)
-	{
-		//Add Temperature
-		if (obs->m_readings[ch].hasTemperature)
-			sensorReadings[ch][0xFFFF].push_back(obs->m_readings[ch].temperature);
-		else
-			sensorReadings[ch][0xFFFF].push_back(0x0000);
-		
-		//Keep a max number of samples in Memory
-		if (sensorReadings[ch][0xFFFF].size() > 400)
-			sensorReadings[ch][0xFFFF].erase( sensorReadings[ch][0xFFFF].begin() );
-
-		//Add gas sensor readings
-		for (size_t j=0; j<obs->m_readings[ch].sensorTypes.size(); j++)
+	try
+	{	
+		//If this is the first observation, resize windows according to the number of chambers to display
+		if ( sensorReadings.empty() )
 		{
-			sensorReadings[ch][(size_t)obs->m_readings[ch].sensorTypes[j]].push_back( obs->m_readings[ch].readingsVoltage[j] );
-			if (sensorReadings[ch][(size_t)obs->m_readings[ch].sensorTypes[j]].size() > 400)
-				sensorReadings[ch][(size_t)obs->m_readings[ch].sensorTypes[j]].erase( sensorReadings[ch][(size_t)obs->m_readings[ch].sensorTypes[j]].begin() );
+			printf("[CEnoseDisplay]: Creating Display = %u Windows\n",obs->m_readings.size()+1 );
+			sensorReadings.resize( obs->m_readings.size() );			
 		}
+		else	
+		{
+			//Ensure both dimensions match
+			if( sensorReadings.size() != obs->m_readings.size() )
+			{
+				cout  << "[CEnoseDisplay]: Error in GasObservation. Dimensions do not math previous observations" << endl;
+				return;
+			}
+		}
+				
+		//Add new timeStamp (seconds)
+		timeReadings.push_back( (float) mrpt::system::timeDifference(timStart,obs->timestamp) );	
+		//Keep a max number of samples in Memory
+		if (timeReadings.size() > 600)
+			timeReadings.erase(timeReadings.begin());
+				
+		//For each Chamber
+		for (size_t ch=0; ch<sensorReadings.size(); ch++)
+		{
+			//Add Temperature
+			//---------------			
+			if (obs->m_readings[ch].hasTemperature)
+				sensorReadings[ch][0xFFFF].push_back(obs->m_readings[ch].temperature);
+			else
+				sensorReadings[ch][0xFFFF].push_back(0x0000);			
+			//Keep a max number of samples in Memory
+			if (sensorReadings[ch][0xFFFF].size() > 600)
+				sensorReadings[ch][0xFFFF].erase( sensorReadings[ch][0xFFFF].begin() );
+						
+			//Add gas sensor readings
+			//-------------------------
+			for (size_t j=0; j<obs->m_readings[ch].sensorTypes.size(); j++)
+			{
+				sensorReadings[ch][(size_t)obs->m_readings[ch].sensorTypes[j]%10000].push_back( obs->m_readings[ch].readingsVoltage[j] );
+				if (sensorReadings[ch][(size_t)obs->m_readings[ch].sensorTypes[j]%10000].size() > 600)
+					sensorReadings[ch][(size_t)obs->m_readings[ch].sensorTypes[j]%10000].erase( sensorReadings[ch][(size_t)obs->m_readings[ch].sensorTypes[j]%10000].begin() );
+			}
 		
-	}//end-for each chamber
-
-
-	//Update display
-	updatePlot();	
+		}//end-for each chamber
+		
+		
+		//Update display
+		updatePlot();		
+	}
+	catch(exception &e)
+	{
+		cerr << "[CEnoseDisplayApp::Iterate] Returning false due to exception: " << endl;
+		cerr << e.what() << endl;
+		return;
+	}
+	catch(...)
+	{
+		cerr << "[CEnoseDisplayApp::Iterate] Returning false due to unknown exception: " << endl;
+		return;
+	}
 }
 
 
@@ -264,7 +310,7 @@ void CEnoseDisplayApp::addToPlot(mrpt::slam::CObservationGasSensorsPtr &obs)
 void CEnoseDisplayApp::updatePlot()
 {
 	try
-	{
+	{		
 		//Create the windows if not already created and update the plot.
 		if (!winExists)
 		{
@@ -288,42 +334,81 @@ void CEnoseDisplayApp::updatePlot()
 			//Create a window for each Chamber
 			for( size_t ch=0; ch<sensorReadings.size(); ch++ )
 			{
-				winMap.push_back( new CDisplayWindowPlots( format("Chamber: %i",(int)ch) ) );
+				/*winMap.push_back( new CDisplayWindowPlots( format("Chamber: %i",(int)ch) ) );
 				winMap[ch]->resize(xSize,ySize);
 				winMap[ch]->axis(graphics_min_x,graphics_max_x,graphics_min_y,graphics_max_y,false);
 				winMap[ch]->axis_equal(false);
 				winMap[ch]->setPos(posx*(xSize+20),posy*(ySize+60));
+				winMap[ch]->hold_off();
+				posx++;*/
+
+				//Alternative
+				CDisplayWindowPlots newPlot;
+				mrpt::gui::CDisplayWindowPlotsPtr newWinPtr = newPlot.Create( format("Chamber: %i",(int)ch) );
+				newWinPtr->resize(xSize,ySize);
+				newWinPtr->axis(graphics_min_x,graphics_max_x,graphics_min_y,graphics_max_y,false);
+				newWinPtr->axis_equal(false);
+				newWinPtr->setPos(posx*(xSize+20),posy*(ySize+60));
+				newWinPtr->hold_off();
+				winMapPro.push_back(newWinPtr);
 				posx++;
 			}
 
 			//Create a window for Temperature display
-			winMap.push_back( new CDisplayWindowPlots( format("Temperature") ) );
+			/*winMap.push_back( new CDisplayWindowPlots( format("Temperature") ) );
 			winMap[sensorReadings.size()]->resize(xSize,ySize);
-			winMap[sensorReadings.size()]->axis(graphics_min_x,graphics_max_x,25,35,false);
+			winMap[sensorReadings.size()]->axis(graphics_min_x,graphics_max_x,-5,50,false);
 			winMap[sensorReadings.size()]->axis_equal(false);				
 			winMap[sensorReadings.size()]->setPos(posx*(xSize+20),posy*(ySize+60));
-		}//end-if !winExists
+			winMap[sensorReadings.size()]->hold_off();*/
 
+			//Alternative
+			CDisplayWindowPlots newPlot;
+			mrpt::gui::CDisplayWindowPlotsPtr newWinPtr = newPlot.Create( format("Temperature") );
+			newWinPtr->resize(xSize,ySize);
+			newWinPtr->axis(graphics_min_x,graphics_max_x,-5,50,false);
+			newWinPtr->axis_equal(false);
+			newWinPtr->setPos(posx*(xSize+20),posy*(ySize+60));
+			newWinPtr->hold_off();
+			winMapPro.push_back(newWinPtr);
+
+		}//end-if !winExists
+		
 		//Display Chambers
 		for( size_t ch=0; ch<sensorReadings.size(); ch++ )
 		{
-			size_t color = 0;
+			size_t color = 0;			
 			for( map<size_t, std::vector<float> >::iterator iter = sensorReadings[ch].begin(); iter != sensorReadings[ch].end(); ++iter )
 			{
 				if (iter->first == (0xFFFF)) 	//Temperature to the last window plot
 				{
-					winMap[sensorReadings.size()]->plot(timeReadings, sensorReadings[ch][iter->first],colors[ch]);
+					cout << "Plotting " << timeReadings.size() << " measurements." << endl;					
+					//winMap[sensorReadings.size()]->plot(timeReadings, sensorReadings[ch][0xFFFF], colors[ch], "Temperature");
+					if( timeReadings.size() == sensorReadings[ch][0Xffff].size() )
+					{
+						//winMapPro.back()->plot(timeReadings, sensorReadings[ch][0xFFFF], colors[ch], "Temperature");
+					}
 				}
 				else
-				{
-					winMap[ch]->plot(timeReadings, sensorReadings[ch][iter->first], colors[color], format("%i",int(iter->first)));
-					color++;
+				{					
+					//cout << "Ploting sensor: " << format("%i",int(iter->first)) << endl;
+					if( timeReadings.size() == sensorReadings[ch][iter->first].size() )
+					{
+						//winMap[ch]->plot( timeReadings, sensorReadings[ch][iter->first], colors[color], format("%i",int(iter->first)) );
+						//winMapPro[ch]->plot( timeReadings, sensorReadings[ch][iter->first], colors[color], format("%i",int(iter->first)) );
+						color++;
+						if( color > 5)
+							color = 0;
+					}
+					else
+						cout << "Error: measurements have incorrect length." << endl;
 				}
 			}
 		}//End-for
-
-		//Display time
-		std::vector<float> time_line, line;
+		
+		//Display vertical line on current time
+		//--------------------------------------
+		/*std::vector<float> time_line, line;
 		time_line.resize(10);
 		line.resize(10);
 		for (size_t i=0;i<time_line.size();i++)
@@ -331,12 +416,19 @@ void CEnoseDisplayApp::updatePlot()
 			time_line[i]= timeReadings.back();
 			line[i]=i/10.0;
 		}
-		winMap[0]->plot(time_line, line ,colors[0x0000], format("%i",int(0x0000)));		
+		winMap[0]->plot(time_line, line ,colors[0x0000], format("%i",int(0x0000)));*/
 
 	}
-	catch(std::exception &e)
+	catch(exception &e)
 	{
+		cerr << "[CEnoseDisplayApp::updatePlot] Returning false due to exception: " << endl;
 		cerr << e.what() << endl;
+		return;
+	}
+	catch(...)
+	{
+		cerr << "[CEnoseDisplayApp::updatePlot] Returning false due to unknown exception: " << endl;
+		return;
 	}
 
 }

@@ -42,6 +42,7 @@ using namespace mrpt;
 using namespace mrpt::system;
 using namespace mrpt::slam;
 using namespace mrpt::utils;
+using namespace mrpt::topography;
 
 CDistributionMappingApp::CDistributionMappingApp()
 {
@@ -65,10 +66,11 @@ bool CDistributionMappingApp::OnStartUp()
 		printf("---------------------------------\n");
 		printf("Loading CreationOptions...");
 		std::string section = "";
+
 		/** @moos_param mapType The type of map to generate. 
 		  * In general the mapType must be a mrpt::slam::CGasConcentrationGridMap2D::TMapRepresentation, 
 		  * but additionally it can be "MobileMap" which creates two maps (a my_map covering all the experimental area of type KalmanApproximate and a fixed size mobile_map moving over the my_map)
-		*/		
+		  */		
 		mapType = m_ini.read_enum<CRandomFieldGridMap2D::TMapRepresentation>(section,"mapType",CRandomFieldGridMap2D::mrKalmanApproximate,true);	
 		/** @moos_param use_metricmap_information Indicates for GMRF models, whether a metric map is considered when building the MRF.
 		*/
@@ -116,6 +118,7 @@ bool CDistributionMappingApp::OnStartUp()
 		cout << "Options loaded Ok" << endl;
 		my_map->clear();	//Necessary in most map types
 
+		
 		// ===============================
 		// (3) Dump to screen
 		// ===============================
@@ -148,7 +151,7 @@ bool CDistributionMappingApp::OnStartUp()
 		STD_increase_value				 = m_ini.read_double("","STD_increase_value",0,true);
 
 		// ========================================================
-		// (4) Load module params
+		// (5) Load module params
 		// ========================================================
 		//! @moos_param SAVE_MAP_SCENE Indicates if the maps should be saved as 3Dscenes
 		SAVE_MAP_SCENE					 = m_ini.read_bool("","SAVE_MAP_SCENE", false,  /*Force existence:*/ true);
@@ -200,8 +203,10 @@ bool CDistributionMappingApp::OnStartUp()
 		timeLastSaved = mrpt::system::now();
 		step = 0;
 		end_of_rawlog = false;
+		ref_valid = false;
+
 		// Refresh map in GUI:
-		SendGasMap3DToGUI();	
+		SendGasMap3DToGUI();
 		return DoRegistrations();
 	}
 	catch (std::exception e) 
@@ -236,16 +241,15 @@ bool CDistributionMappingApp::Iterate()
 	bool new_wind_measurement = false;
 	bool new_location = false;
 
-	mrpt::slam::CObservationGasSensorsPtr gasObs;
-	mrpt::poses::CPose2D robotPose2D;	
-	mrpt::slam::CObservationWindSensorPtr windObs;	
+	mrpt::slam::CObservationGasSensorsPtr gasObs;	
+	mrpt::slam::CObservationWindSensorPtr windObs;
+	mrpt::poses::CPose2D robotPose2D;
 
-	if (!insert_from_rawlog)
-	{
-	 
-		// ============================================
+	if( !insert_from_rawlog )
+	{	 
+		// =============================================================
 		// 1) READ Gas sensors (MCEnose, Full_MCEnose, GDM, ENOSE_SIMUL)
-		// ============================================
+		// =============================================================
 		try
 		{	
 			CMOOSVariable * pVar = GetMOOSVar( my_map->insertionOptions.gasSensorLabel );
@@ -298,7 +302,7 @@ bool CDistributionMappingApp::Iterate()
 		}
 
 		// ============================================
-		// 3) READ Wind information
+		// 3) READ Wind sensor
 		// ============================================	
 		//try{
 		//	if (my_map->insertionOptions.useWindInformation)
@@ -337,7 +341,9 @@ bool CDistributionMappingApp::Iterate()
 	}
 	else
 	{
-		//Load data from Rawlog-file as pairs<gas_observation - Pose>
+		//------------------------------------------------------------
+		// Load data from Rawlog-file as pairs<gas_observation - Pose>
+		//------------------------------------------------------------
 		if (!end_of_rawlog)
 		{
 			while (!new_gas_measurement || !new_location)
@@ -349,17 +355,57 @@ bool CDistributionMappingApp::Iterate()
 
 					if ( o ) //ASSERT_(o);
 					{
-						if (IS_CLASS(o,CObservationGasSensors))
+						// Enose Observation
+						if( IS_CLASS(o,CObservationGasSensors) )
 						{
 							CObservationGasSensorsPtr obs = CObservationGasSensorsPtr( o );
 				   
-				   			if (obs->sensorLabel == my_map->insertionOptions.gasSensorLabel)
+				   			if( obs->sensorLabel == my_map->insertionOptions.gasSensorLabel )
 							{
-								gasObs = obs;
+								//got new gas observation								
+								bool useNorm = false;
+								bool useMean = true;
+								float maxmax[7] = {0.6,	0.159215666666667, 0.442352888888889,	0.129673444444444,	0.0933333333333333,	0.308235333333333,	0.6}; 
+								float minmin[7] = {0.0135947777777778,	0,	0.00313733333333333,	0,	0.00392166666666667,	0.0122878888888889,	0.00366022222222222}; 
+								float norm = 0;
+								if( useNorm )
+								{
+									for(size_t k=0;k<obs->m_readings[0].readingsVoltage.size();k++ )
+									{
+										//Normalize each sensor and estimate the Norm2
+										norm += square( obs->m_readings[0].readingsVoltage[k] - minmin[k] ) / ( maxmax[k]-minmin[k] );
+									}
+
+									//norm2
+									norm = sqrt(norm);
+									obs->m_readings[0].readingsVoltage.clear();
+									obs->m_readings[0].readingsVoltage.push_back(norm);
+									obs->m_readings[0].sensorTypes.clear();
+									obs->m_readings[0].sensorTypes.push_back(0);
+								}
+
+								if( useMean )
+								{
+									for(size_t k=0;k<obs->m_readings[0].readingsVoltage.size();k++ )
+									{
+										//Normalize each sensor and estimate the Norm2
+										norm += (obs->m_readings[0].readingsVoltage[k] - minmin[k] ) / ( maxmax[k]-minmin[k]);
+									}
+
+									//mean
+									norm = norm/obs->m_readings[0].readingsVoltage.size();
+									obs->m_readings[0].readingsVoltage.clear();
+									obs->m_readings[0].readingsVoltage.push_back(norm);
+									obs->m_readings[0].sensorTypes.clear();
+									obs->m_readings[0].sensorTypes.push_back(0);
+								}
+								
 								new_gas_measurement = true;
+								gasObs = obs;
+
 							}
 						}
-						else if (IS_CLASS(o,CObservationOdometry))					
+						else if( IS_CLASS(o,CObservationOdometry) )
 						{
 							CObservationOdometryPtr obs = CObservationOdometryPtr( o );
 				   
@@ -374,7 +420,44 @@ bool CDistributionMappingApp::Iterate()
 								m_Comms.Notify("LOCALIZATION", sPose );
 							}
 						}
+						else if( IS_CLASS(o,CObservationGPS) )
+						{
+							CObservationGPSPtr obs = CObservationGPSPtr( o );
+
+							if( obs->has_GGA_datum )
+							{
+								TPoint3D  X_ENU;		// Transformed coordinates
+
+								const TGeodeticCoords obsCoords = obs->GGA_datum.getAsStruct<TGeodeticCoords>();
+
+								// is the first gps datum? - take as reference
+								if (!ref_valid)
+								{
+									cout << "First GPS obs. Setting reference system" << endl;
+									ref_valid=true;
+									ref = obsCoords;
+								}
+
+								// Local XYZ coordinates transform:
+								geodeticToENU_WGS84( obsCoords, X_ENU, ref );
+
+								// Geocentric XYZ:
+								//TPoint3D  X_geo;
+								//geodeticToGeocentric_WGS84( obsCoords, X_geo);
+
+								robotPose3D = CPose3D(X_ENU.x,X_ENU.y,X_ENU.z);
+								new_location = true;
+
+								//Publish current robot localization, to be displayed in the GUI
+								//! @moos_publish	LOCALIZATION   The robot estimated pose in format "[x y phi]"
+								string sPose;
+								X_ENU.asString(sPose);
+								m_Comms.Notify("LOCALIZATION", sPose );								
+							}						
+						}
 					}
+					else
+						cout << "[CDistributionMapping] ERROR: Problem reading the provided rawlog file" << endl;
 				}
 				catch( exception &e )
 				{
@@ -382,6 +465,8 @@ bool CDistributionMappingApp::Iterate()
 					rawlog_input.close();
 					cout << "END OF RAWLOG" << endl;
 					end_of_rawlog = true;
+					//Save final distribution map
+					SaveGasMap();
 					break;
 				}
 			}//end while
@@ -392,32 +477,27 @@ bool CDistributionMappingApp::Iterate()
 
 
 
-	// ============================================
-	// Update Online Maps:
-	// ============================================
-#define DO_PROFILE
+	
+	
+	//#define DO_PROFILE
+	#ifdef DO_PROFILE
+		static mrpt::utils::CTimeLogger timelogger;
+		timelogger.enter("insObs");
+	#endif
 
-#ifdef DO_PROFILE
-	static mrpt::utils::CTimeLogger timelogger;
-	timelogger.enter("insObs");
-#endif
-
+	// ============================================
+	// Update Distribution Map:
+	// ============================================
 	try{
-		if (new_gas_measurement && new_location)
-		{
+		if( new_gas_measurement && new_location )
+		{	
 			my_map->insertObservation(gasObs.pointer(),&robotPose3D);
-			
-#ifdef DO_PROFILE	
-	cout << "Inserting Gas Obs=" << gasObs->m_readings[0].readingsVoltage[0] << ", in ["<< my_map->getSizeX() << "x" << my_map->getSizeY() <<"]cells map took: " << timelogger.leave("insObs") << "s" << endl;
-	cout << timelogger.getStatsAsText();
-#endif
-			
-		}
-		
-		if (new_wind_measurement && new_location)
-		{
-			//update wind maps			
-			// To Be implemented
+			cout << ".";
+
+			#ifdef DO_PROFILE	
+				cout << "Inserting Gas Obs=" << gasObs->m_readings[0].readingsVoltage[0] << ", in ["<< my_map->getSizeX() << "x" << my_map->getSizeY() <<"]cells map took: " << timelogger.leave("insObs") << "s" << endl;
+				cout << timelogger.getStatsAsText();
+			#endif
 		}
 	}catch(...){
 		cout << "Exception while inserting obs: "  << endl;
@@ -425,7 +505,7 @@ bool CDistributionMappingApp::Iterate()
 	
 
 	// ============================================
-	// 4) Simulate Advection
+	// Simulate Advection
 	// ============================================
 	try{		
 		if( my_map->insertionOptions.useWindInformation )
@@ -452,12 +532,12 @@ bool CDistributionMappingApp::Iterate()
 	}
 
 	// ============================================
-	// 4) Refresh map in GUI:
+	// Refresh map in GUI and Save to file:
 	// ============================================
 	try{
 		SendGasMap3DToGUI(); // This updates "m_last_3D_GUI_time"
+
 		double At = mrpt::system::timeDifference(timeLastSaved, mrpt::system::now());
-		
 		if ( (SAVE_MAP_SCENE) && (At >= 1/LOG_FREQUENCY) )
 		{
 			SaveGasMap();
@@ -516,6 +596,9 @@ bool CDistributionMappingApp::OnNewMail(MOOSMSG_LIST &NewMail)
 	//	MOOSTrace(format("New msg received: %s \n",i->GetKey()));
 		if( (i->GetName()=="SHUTDOWN") && (MOOSStrCmp(i->GetString(),"true")) )
 		{
+			//Save final distribution map
+			SaveGasMap();
+
 			// Disconnect comms:
 			MOOSTrace("Closing Module \n");
 			this->RequestQuit();

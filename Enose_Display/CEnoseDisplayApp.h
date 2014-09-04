@@ -71,7 +71,7 @@ protected:
 	std::vector< std::map<size_t, std::vector<float> > > sensorReadings;
 
 	/** Time vector for plots */
-	std::vector<float>  timeReadings, timeModel;
+	std::vector<float>  timeReadings;
 
 	/** Timestamp of the first observation received */
 	mrpt::system::TTimeStamp				timStart;
@@ -84,6 +84,7 @@ protected:
 
 	/** Map with all the windows created to plot the data */
 	std::vector<mrpt::gui::CDisplayWindowPlots*> winMap;
+	std::vector<mrpt::gui::CDisplayWindowPlotsPtr> winMapPro;
 
 	/** Get the resolution of the display screen to resize windows */
 	void GetDesktopResolution(int& horizontal, int& vertical);

@@ -39,6 +39,8 @@
 #include <mrpt/slam/CGasConcentrationGridMap2D.h>
 #include <mrpt/slam/CObservationWindSensor.h>
 
+#include <mrpt/slam/CObservationGPS.h>
+#include <mrpt/topography.h>
 
 #define INVALID_SENSOR_INDEX  size_t(-1)
 
@@ -87,7 +89,11 @@ protected:
 	size_t step;
 	mrpt::utils::CFileGZInputStream rawlog_input;
 	int indexMonitoredSensor;
+
+	//for rawlog based
 	bool end_of_rawlog;
+	bool ref_valid;
+	mrpt::topography::TGeodeticCoords ref;
 };
 #endif
 
