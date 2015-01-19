@@ -43,7 +43,7 @@ protected:
 	virtual void impl_simulateTimeInterval(
 		const double     At,
 		InfoPerMap & info,
-		mrpt::slam::CGasConcentrationGridMap2D & gasMap
+		mrpt::maps::CGasConcentrationGridMap2D & gasMap
 		);
 
 }; // end of GasMapModel_Dynamic

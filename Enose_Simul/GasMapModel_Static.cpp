@@ -44,7 +44,7 @@ GasMapModel_Static::GasMapModel_Static(const mrpt::utils::CConfigFileBase &confi
 void GasMapModel_Static::impl_simulateTimeInterval(
 	const double     At,
 	InfoPerMap & info,
-	mrpt::slam::CGasConcentrationGridMap2D & gasMap
+	mrpt::maps::CGasConcentrationGridMap2D & gasMap
 	)
 {
 	// Static model: Nothing to do, since the map doesn't change.

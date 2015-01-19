@@ -39,7 +39,7 @@ using namespace std;
 using namespace mrpt;
 using namespace mrpt::hwdrivers;
 using namespace mrpt::system;
-using namespace mrpt::slam;
+using namespace mrpt::obs;
 using namespace mrpt::utils;
 
 CMCEnoseApp::CMCEnoseApp():
@@ -145,7 +145,7 @@ bool CMCEnoseApp::Iterate()
 	//------------------------------------
 	try
 	{
-		mrpt::slam::CObservationGasSensors newObs;
+		mrpt::obs::CObservationGasSensors newObs;
 		bool obs_ok;
 		obs_ok = eNoses.getObservation( newObs );
 		if (!obs_ok )
@@ -245,7 +245,7 @@ bool CMCEnoseApp::Iterate()
 	//-----------------------------------------
 	// PUBLISH MCE-NOSE OBS (all chambers)
 	//-----------------------------------------
-	mrpt::slam::CObservationGasSensorsPtr FullMCEoutput = CObservationGasSensors::Create();
+	mrpt::obs::CObservationGasSensorsPtr FullMCEoutput = CObservationGasSensors::Create();
 	FullMCEoutput->sensorLabel = "ENOSE_MCE_OBS";
 	FullMCEoutput->timestamp = obs.timestamp;
 	//Copy the content
@@ -258,7 +258,7 @@ bool CMCEnoseApp::Iterate()
 	//---------------------------------
 	//Publish content of Active Chamber
 	//---------------------------------
-	mrpt::slam::CObservationGasSensorsPtr MCEoutput = CObservationGasSensors::Create();
+	mrpt::obs::CObservationGasSensorsPtr MCEoutput = CObservationGasSensors::Create();
 	MCEoutput->sensorLabel = "ENOSE_MCE_AC_OBS";
 	MCEoutput->timestamp = obs.timestamp;
 	MCEoutput->m_readings.push_back( obs.m_readings[acChamber] );				

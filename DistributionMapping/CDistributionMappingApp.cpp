@@ -40,8 +40,12 @@
 using namespace std;
 using namespace mrpt;
 using namespace mrpt::system;
-using namespace mrpt::slam;
+using namespace mrpt::obs;
+using namespace mrpt::maps;
 using namespace mrpt::utils;
+using namespace mrpt::poses;
+using namespace mrpt::math;
+using namespace mrpt::opengl;
 using namespace mrpt::topography;
 
 CDistributionMappingApp::CDistributionMappingApp()
@@ -95,7 +99,7 @@ bool CDistributionMappingApp::OnStartUp()
 
 		//Chek if obstacles
 		const bool obstacles = m_ini.read_bool(section,"GMRF_use_occupancy_information",false,false);
-        if( (mapType == mrpt::slam::CRandomFieldGridMap2D::mrGMRF_SD) && (obstacles) )
+        if( (mapType == mrpt::maps::CRandomFieldGridMap2D::mrGMRF_SD) && (obstacles) )
 		{            
 			//reset map dimensions so "resize" can match to ocupancy-gridmap
 			x0=y0=0;
@@ -103,12 +107,11 @@ bool CDistributionMappingApp::OnStartUp()
 		}
 
 		//Create GasMap
-		my_map = new mrpt::slam::CGasConcentrationGridMap2D(mapType,x0,x1,y0,y1,res);
+		my_map = new mrpt::maps::CGasConcentrationGridMap2D(mapType,x0,x1,y0,y1,res);
 		cout << "GasGridMap created Successfully" << endl;
 
-		//! @moos_param disableSaveAs3DObject Indicates (true/false) if the map can be saved as a 3D Object
-		my_map->m_disableSaveAs3DObject = m_ini.read_bool(section,"disableSaveAs3DObject","false",false);
-		
+		//! @moos_param enableSaveAs3DObject Indicates (true/false) if the map can be saved as a 3D Object
+		my_map->genericMapParams.enableSaveAs3DObject = m_ini.read_bool(section,"enableSaveAs3DObject","false",false);
 		
 		// ========================================================
 		// (2) Load Insertion Options
@@ -241,8 +244,8 @@ bool CDistributionMappingApp::Iterate()
 	bool new_wind_measurement = false;
 	bool new_location = false;
 
-	mrpt::slam::CObservationGasSensorsPtr gasObs;	
-	mrpt::slam::CObservationWindSensorPtr windObs;
+	mrpt::obs::CObservationGasSensorsPtr gasObs;	
+	mrpt::obs::CObservationWindSensorPtr windObs;
 	mrpt::poses::CPose2D robotPose2D;
 
 	if( !insert_from_rawlog )

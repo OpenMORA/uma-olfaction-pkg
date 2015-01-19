@@ -91,7 +91,7 @@ protected:
 
 	/** Updates the display for each chamber, ActiveChamber and temperature */
 	void updatePlot();
-	void addToPlot(mrpt::slam::CObservationGasSensorsPtr &obs);
+	void addToPlot(mrpt::obs::CObservationGasSensorsPtr &obs);
 
 };
 #endif

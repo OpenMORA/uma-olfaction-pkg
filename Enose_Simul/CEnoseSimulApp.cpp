@@ -37,7 +37,7 @@
 using namespace std;
 using namespace mrpt;
 using namespace mrpt::system;
-using namespace mrpt::slam;
+using namespace mrpt::obs;
 using namespace mrpt::utils;
 
 CEnoseSimulApp::CEnoseSimulApp()  :
@@ -184,14 +184,14 @@ bool CEnoseSimulApp::Iterate()
 			m_last_read_time = mrpt::system::now();
 
 			// Read current robot position:
-			CPose2D robotPose2D;
+			mrpt::poses::CPose2D robotPose2D;
 			CMOOSVariable * pVarLoc = GetMOOSVar( "LOCALIZATION" );
 			if(pVarLoc && pVarLoc->IsFresh())
 			{
 				robotPose2D.fromString( pVarLoc->GetStringVal() );
 
 				// Create output observation:
-				mrpt::slam::CObservationGasSensors  obs;
+				mrpt::obs::CObservationGasSensors  obs;
 				m_gt_gas_maps->simulateReadings(
 					robotPose2D,
 					m_eNoses,

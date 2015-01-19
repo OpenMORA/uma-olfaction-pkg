@@ -34,12 +34,11 @@
 #include <mrpt/utils.h>
 #include <mrpt/utils/CFileGZInputStream.h>
 #include <mrpt/system/threads.h>
-#include <mrpt/slam/CRandomFieldGridMap2D.h>
-#include <mrpt/slam/CObservationOdometry.h>
-#include <mrpt/slam/CGasConcentrationGridMap2D.h>
-#include <mrpt/slam/CObservationWindSensor.h>
-
-#include <mrpt/slam/CObservationGPS.h>
+#include <mrpt/maps/CRandomFieldGridMap2D.h>
+#include <mrpt/maps/CGasConcentrationGridMap2D.h>
+#include <mrpt/obs/CObservationOdometry.h>
+#include <mrpt/obs/CObservationWindSensor.h>
+#include <mrpt/obs/CObservationGPS.h>
 #include <mrpt/topography.h>
 
 #define INVALID_SENSOR_INDEX  size_t(-1)
@@ -69,9 +68,9 @@ protected:
 	void SaveGasMap();
 
 	// DATA. Your local variables here...
-	mrpt::slam::CRandomFieldGridMap2D::TMapRepresentation mapType;				/** The type of map to generate (kalman, kernel, etc) */
-	mrpt::slam::CGasConcentrationGridMap2D	*my_map;							/** The Online Gas Distribution Map being generated */
-	mrpt::slam::COccupancyGridMap2D	m_gridmap;									/** The occupancy_grid map (optional) */
+	mrpt::maps::CRandomFieldGridMap2D::TMapRepresentation mapType;				/** The type of map to generate (kalman, kernel, etc) */
+	mrpt::maps::CGasConcentrationGridMap2D	*my_map;							/** The Online Gas Distribution Map being generated */
+	mrpt::maps::COccupancyGridMap2D	m_gridmap;									/** The occupancy_grid map (optional) */
 
 	bool use_occupancy_information;												/** [GMRF] Wheter consider metric map to build the MRF*/
 	double  m_rate_refresh_gui,STD_increase_value,std_windNoise_phi,std_windNoise_mod;

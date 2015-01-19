@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include <mrpt/slam/CGasConcentrationGridMap2D.h>
+#include <mrpt/maps/CGasConcentrationGridMap2D.h>
 #include <mrpt/utils/CConfigFileBase.h>
 
 /** Parameters & state of each eNose device */
@@ -94,7 +94,7 @@ public:
 		const mrpt::system::TTimeStamp &timestamp,
 		const double  At_since_last_seconds,
 		const std::string  &sensorLabel,
-		mrpt::slam::CObservationGasSensors  &out_obs
+		mrpt::obs::CObservationGasSensors  &out_obs
 		);
 
 	/** Obtain a 3D view of the current state of all gas maps:
@@ -108,7 +108,7 @@ public:
 	/** Static method that returns the REAL instantaneous concentration at any point of a map (or 0 if it's out of the map)
 	  */
 	static double getRealConcentration(
-		const mrpt::slam::CGasConcentrationGridMap2D & gasmap,
+		const mrpt::maps::CGasConcentrationGridMap2D & gasmap,
 		const mrpt::math::TPoint2D &pt
 		);
 
@@ -143,11 +143,11 @@ protected:
 	virtual void impl_simulateTimeInterval(
 		const double     At,
 		InfoPerMap & info,
-		mrpt::slam::CGasConcentrationGridMap2D & gasMap
+		mrpt::maps::CGasConcentrationGridMap2D & gasMap
 		) = 0;
 
 
-	std::vector<std::pair<InfoPerMap,mrpt::slam::CGasConcentrationGridMap2DPtr> > m_all_gas_grid_maps;
+	std::vector<std::pair<InfoPerMap,mrpt::maps::CGasConcentrationGridMap2DPtr> > m_all_gas_grid_maps;
 private:
 
 

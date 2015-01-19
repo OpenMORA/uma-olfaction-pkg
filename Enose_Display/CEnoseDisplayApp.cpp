@@ -40,7 +40,7 @@ using namespace std;
 using namespace mrpt;
 using namespace mrpt::hwdrivers;
 using namespace mrpt::system;
-using namespace mrpt::slam;
+using namespace mrpt::obs;
 using namespace mrpt::utils;
 using namespace mrpt::gui;
 
@@ -127,7 +127,7 @@ bool CEnoseDisplayApp::Iterate()
 			pVarGas->SetFresh(false);
 		
 			CSerializablePtr obj;
-			mrpt::slam::CObservationGasSensorsPtr gasObs;
+			mrpt::obs::CObservationGasSensorsPtr gasObs;
 			mrpt::utils::RawStringToObject(pVarGas->GetStringRef(), obj);
 		
 			if ( IS_CLASS(obj, CObservationGasSensors ))
@@ -168,7 +168,7 @@ bool CEnoseDisplayApp::Iterate()
 			//addToPlot(gasObs);					
 			return true;
 		}
-	
+		return false;
 	}
 	catch(exception &e)
 	{
@@ -235,7 +235,7 @@ bool CEnoseDisplayApp::OnNewMail(MOOSMSG_LIST &NewMail)
 /*-------------------------------------------------------------
 					addToPlot
 -------------------------------------------------------------*/
-void CEnoseDisplayApp::addToPlot(mrpt::slam::CObservationGasSensorsPtr &obs)
+void CEnoseDisplayApp::addToPlot(mrpt::obs::CObservationGasSensorsPtr &obs)
 {
 	try
 	{	

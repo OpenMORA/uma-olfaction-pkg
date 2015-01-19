@@ -32,7 +32,7 @@
 using namespace std;
 using namespace mrpt;
 using namespace mrpt::utils;
-using namespace mrpt::slam;
+using namespace mrpt::obs;
 
 
 GasMapModel_Dynamic::GasMapModel_Dynamic(const mrpt::utils::CConfigFileBase &config_source)
@@ -68,7 +68,7 @@ GasMapModel_Dynamic::GasMapModel_Dynamic(const mrpt::utils::CConfigFileBase &con
 void GasMapModel_Dynamic::impl_simulateTimeInterval(
 	const double     At,
 	InfoPerMap & info,
-	mrpt::slam::CGasConcentrationGridMap2D & gasMap
+	mrpt::maps::CGasConcentrationGridMap2D & gasMap
 	)
 {
 	//printf("[GasMapModel_Dynamic] At = %.2f sec\n",At);
@@ -109,7 +109,7 @@ void GasMapModel_Dynamic::impl_simulateTimeInterval(
 			const unsigned char * ptr_img = img.get_unsafe(0,yy,0);
 			for (unsigned int xx=0;xx<w;xx++)
 			{
-				mrpt::slam::TRandomFieldCell * cell = gasMap.cellByIndex(xx,yy);
+				mrpt::maps::TRandomFieldCell * cell = gasMap.cellByIndex(xx,yy);
 				cell->kf_mean = (*ptr_img++) * K;
 			}
 		}		

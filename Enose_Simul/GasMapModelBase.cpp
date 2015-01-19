@@ -38,7 +38,9 @@
 using namespace std;
 using namespace mrpt;
 using namespace mrpt::system;
-using namespace mrpt::slam;
+using namespace mrpt::obs;
+using namespace mrpt::maps;
+using namespace mrpt::utils;
 using namespace mrpt::random;
 
 
@@ -74,9 +76,9 @@ GasMapModelBase::GasMapModelBase(const mrpt::utils::CConfigFileBase &config_sour
 	for (int i=0;i<num_maps;i++)
 	{
 		// Create map:
-		mrpt::slam::CGasConcentrationGridMap2DPtr &gasmap_ptr = m_all_gas_grid_maps[i].second;
-		gasmap_ptr = mrpt::slam::CGasConcentrationGridMap2D::Create();
-		mrpt::slam::CGasConcentrationGridMap2D & gasmap = *gasmap_ptr;
+		mrpt::maps::CGasConcentrationGridMap2DPtr &gasmap_ptr = m_all_gas_grid_maps[i].second;
+		gasmap_ptr = mrpt::maps::CGasConcentrationGridMap2D::Create();
+		mrpt::maps::CGasConcentrationGridMap2D & gasmap = *gasmap_ptr;
 
 		// Extra info field:
 		InfoPerMap &info = m_all_gas_grid_maps[i].first;
@@ -108,7 +110,7 @@ GasMapModelBase::GasMapModelBase(const mrpt::utils::CConfigFileBase &config_sour
 			const string sFil = config_source.read_string("",format("map%i_bitmap",i),"",true);
 			printf("[GasMapModelBase] map%i_initial_bitmap = %s\n",i,sFil.c_str());
 
-			CImage img;
+			mrpt::utils::CImage img;
 			if (!img.loadFromFile(sFil, 0 /* force grayscale */))
 			{
 				cout << "Error loading bitmap image for gas map: " << sFil.c_str() << endl; 
@@ -130,7 +132,7 @@ GasMapModelBase::GasMapModelBase(const mrpt::utils::CConfigFileBase &config_sour
 				const unsigned char * ptr_img = img.get_unsafe(0,yy,0);
 				for (unsigned int xx=0;xx<w;xx++)
 				{
-					mrpt::slam::TRandomFieldCell * cell = gasmap.cellByIndex(xx,yy);
+					mrpt::maps::TRandomFieldCell * cell = gasmap.cellByIndex(xx,yy);
 					cell->kf_mean = (*ptr_img++) * K;
 				}
 			}
@@ -154,7 +156,7 @@ GasMapModelBase::GasMapModelBase(const mrpt::utils::CConfigFileBase &config_sour
 			gasmap.setSize(x0,x1,y0,y1,res);
 
 			// Fill all cells with default value:
-			mrpt::slam::TRandomFieldCell  defCell;
+			mrpt::maps::TRandomFieldCell  defCell;
 			defCell.kf_mean = value;
 			gasmap.fill(defCell);
 		}
@@ -198,7 +200,7 @@ void GasMapModelBase::getAs3DObject(mrpt::opengl::CSetOfObjectsPtr &glObj) const
 	//   each map (each "chemical") can be in a different color, colormaps, etc.
 	//   New options can be created and loaded from the .moos file at start up.
 	std::string m_3D_map_mode = "default";
-	TColormap color_map_type = mrpt::utils::cmJET;
+	mrpt::utils::TColormap color_map_type = mrpt::utils::cmJET;
 
 	for (size_t i=0;i<m_all_gas_grid_maps.size();i++)
 	{
@@ -220,7 +222,7 @@ void GasMapModelBase::getAs3DObject(mrpt::opengl::CSetOfObjectsPtr &glObj) const
 				unsigned char * ptr_img_transp = img_transparency.get_unsafe(0,yy,0);
 				for (size_t xx=0;xx<w;xx++)
 				{
-					const mrpt::slam::TRandomFieldCell * cell = gasmap.cellByIndex(xx,yy);
+					const mrpt::maps::TRandomFieldCell * cell = gasmap.cellByIndex(xx,yy);
 					const float in_gray = cell->kf_mean;
 
 					// RGB color:
@@ -262,7 +264,7 @@ void GasMapModelBase::simulateReadings(
 	const mrpt::system::TTimeStamp &timestamp,
 	const double  At_since_last_seconds,
 	const std::string  &sensorLabel,
-	mrpt::slam::CObservationGasSensors  &obs
+	mrpt::obs::CObservationGasSensors  &obs
 	)
 {	
 	obs.timestamp = timestamp;
@@ -272,7 +274,7 @@ void GasMapModelBase::simulateReadings(
 	{
 		InfoPerENose & enose = eNoses[nEnose];
 
-		mrpt::slam::CObservationGasSensors::TObservationENose eNoseData;
+		mrpt::obs::CObservationGasSensors::TObservationENose eNoseData;
 		eNoseData.hasTemperature = false;
 		eNoseData.isActive = false;
 		eNoseData.eNosePoseOnTheRobot.x = enose.x;
@@ -295,8 +297,8 @@ void GasMapModelBase::simulateReadings(
 		for (size_t nMap=0; nMap<nMaps;nMap++)
 		{
 			// get map data:
-			const mrpt::slam::CGasConcentrationGridMap2DPtr &gasmap_ptr = m_all_gas_grid_maps[nMap].second;
-			const mrpt::slam::CGasConcentrationGridMap2D & gasmap = *gasmap_ptr;
+			const mrpt::maps::CGasConcentrationGridMap2DPtr &gasmap_ptr = m_all_gas_grid_maps[nMap].second;
+			const mrpt::maps::CGasConcentrationGridMap2D & gasmap = *gasmap_ptr;
 			InfoPerMap &mapinfo = m_all_gas_grid_maps[nMap].first;
 
 			// Simulate noise-free reading:
@@ -344,14 +346,14 @@ void GasMapModelBase::simulateReadings(
 /** Static method that returns the REAL instantaneous concentration at any point of a map (or 0 if it's out of the map)
   */
 double GasMapModelBase::getRealConcentration(
-	const mrpt::slam::CGasConcentrationGridMap2D & gasmap,
+	const mrpt::maps::CGasConcentrationGridMap2D & gasmap,
 	const mrpt::math::TPoint2D &pt
 	)
 {
 	// TODO JAVI: This can be done better with linear interpolation of neighbors, etc.
 	//  See methods: cellByIndex(), x2idx(), y2idx()...
 
-	const mrpt::slam::TRandomFieldCell * cell_xy = gasmap.cellByPos(pt.x,pt.y);
+	const mrpt::maps::TRandomFieldCell * cell_xy = gasmap.cellByPos(pt.x,pt.y);
 	if (cell_xy)
 	{
 		return cell_xy->kf_mean;
@@ -396,7 +398,7 @@ void GasMapModelBase::getAsMatrix(mrpt::math::CMatrix &mat) const
 			}
 			mat += M;
 		}
-		catch (mrpt::utils::exception e)
+		catch (std::exception e)
 		{
 			cout << "exception: " << e.what() << endl;
 		}

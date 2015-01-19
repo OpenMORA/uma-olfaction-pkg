@@ -80,7 +80,7 @@ protected:
 	mrpt::hwdrivers::CBoardENoses			eNoses;
 
 	/** The MCEnose observation class */
-	mrpt::slam::CObservationGasSensors		obs;
+	mrpt::obs::CObservationGasSensors		obs;
 	
 	bool						m_initialized_ok;
 	unsigned int				num_chambers;			/** MCEnose chambers number */
